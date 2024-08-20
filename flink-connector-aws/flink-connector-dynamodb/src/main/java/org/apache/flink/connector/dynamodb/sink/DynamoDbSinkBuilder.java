@@ -92,6 +92,7 @@ public class DynamoDbSinkBuilder<InputT>
     private Properties dynamodbClientProperties;
 
     private ElementConverter<InputT, DynamoDbWriteRequest> elementConverter;
+    private String tableArn;
     private String tableName;
 
     private List<String> overwriteByPartitionKeys;
@@ -110,6 +111,12 @@ public class DynamoDbSinkBuilder<InputT>
     /** Table name for the DynamoDB sink. */
     public DynamoDbSinkBuilder<InputT> setTableName(String tableName) {
         this.tableName = tableName;
+        return this;
+    }
+
+    /** Table ARN for the DynamoDB sink. */
+    public DynamoDbSinkBuilder<InputT> setTableArn(String tableArn) {
+        this.tableArn = tableArn;
         return this;
     }
 
@@ -156,6 +163,7 @@ public class DynamoDbSinkBuilder<InputT>
                 Optional.ofNullable(getMaxTimeInBufferMS()).orElse(DEFAULT_MAX_TIME_IN_BUFFER_MS),
                 Optional.ofNullable(getMaxRecordSizeInBytes()).orElse(DEFAULT_MAX_RECORD_SIZE_IN_B),
                 Optional.of(failOnError).orElse(DEFAULT_FAIL_ON_ERROR),
+                tableArn,
                 tableName,
                 Optional.ofNullable(overwriteByPartitionKeys).orElse(new ArrayList<>()),
                 Optional.ofNullable(dynamodbClientProperties).orElse(new Properties()));

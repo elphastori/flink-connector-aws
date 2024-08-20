@@ -63,6 +63,8 @@ public class DynamoDbSinkWriterTest {
 
     private static final String PARTITION_KEY = "partition_key";
     private static final String SORT_KEY = "sort_key";
+    private static final boolean isTableArn = true;
+    private static final String TABLE_ARN = "arn:aws:dynamodb:us-east-1:024458728457:table/table_name";
     private static final String TABLE_NAME = "table_name";
     private static final long FUTURE_TIMEOUT_MS = 1000;
 
@@ -368,6 +370,7 @@ public class DynamoDbSinkWriterTest {
                         1000,
                         1024,
                         failOnError,
+                        isTableArn ? TABLE_ARN : null,
                         TABLE_NAME,
                         overwriteByPartitionKeys,
                         new Properties());
@@ -482,7 +485,7 @@ public class DynamoDbSinkWriterTest {
         @Override
         public CompletableFuture<BatchWriteItemResponse> batchWriteItem(
                 BatchWriteItemRequest batchWriteItemRequest) {
-            requestHistory.add(batchWriteItemRequest.requestItems().get(TABLE_NAME));
+            requestHistory.add(batchWriteItemRequest.requestItems().get(isTableArn ? TABLE_ARN : TABLE_NAME));
             return CompletableFuture.completedFuture(BatchWriteItemResponse.builder().build());
         }
 
@@ -527,7 +530,7 @@ public class DynamoDbSinkWriterTest {
             }
 
             List<WriteRequest> failedRequests =
-                    batchWriteItemRequest.requestItems().get(TABLE_NAME).stream()
+                    batchWriteItemRequest.requestItems().get(isTableArn ? TABLE_ARN : TABLE_NAME).stream()
                             .filter(
                                     writeRequest ->
                                             failWhenMatched.test(
@@ -541,7 +544,7 @@ public class DynamoDbSinkWriterTest {
             BatchWriteItemResponse.Builder responseBuilder = BatchWriteItemResponse.builder();
             if (!failedRequests.isEmpty()) {
                 responseBuilder =
-                        responseBuilder.unprocessedItems(singletonMap(TABLE_NAME, failedRequests));
+                        responseBuilder.unprocessedItems(singletonMap(isTableArn ? TABLE_ARN : TABLE_NAME, failedRequests));
             }
             return CompletableFuture.completedFuture(responseBuilder.build());
         }
@@ -571,7 +574,7 @@ public class DynamoDbSinkWriterTest {
         public CompletableFuture<BatchWriteItemResponse> batchWriteItem(
                 BatchWriteItemRequest batchWriteItemRequest) {
             List<WriteRequest> failedRequests =
-                    batchWriteItemRequest.requestItems().get(TABLE_NAME).stream()
+                    batchWriteItemRequest.requestItems().get(isTableArn ? TABLE_ARN : TABLE_NAME).stream()
                             .filter(
                                     writeRequest -> {
                                         if (writeRequest.putRequest() != null) {
@@ -598,7 +601,7 @@ public class DynamoDbSinkWriterTest {
             BatchWriteItemResponse.Builder responseBuilder = BatchWriteItemResponse.builder();
             if (!failedRequests.isEmpty()) {
                 responseBuilder =
-                        responseBuilder.unprocessedItems(singletonMap(TABLE_NAME, failedRequests));
+                        responseBuilder.unprocessedItems(singletonMap(isTableArn ? TABLE_ARN : TABLE_NAME, failedRequests));
             }
             return CompletableFuture.completedFuture(responseBuilder.build());
         }

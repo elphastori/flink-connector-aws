@@ -28,6 +28,7 @@ import org.apache.flink.connector.dynamodb.sink.client.DynamoDbAsyncClientProvid
 import org.apache.flink.connector.dynamodb.sink.client.SdkClientProvider;
 import org.apache.flink.core.io.SimpleVersionedSerializer;
 
+import software.amazon.awssdk.arns.Arn;
 import software.amazon.awssdk.services.dynamodb.DynamoDbAsyncClient;
 
 import java.io.IOException;
@@ -82,6 +83,7 @@ public class DynamoDbSink<InputT> extends AsyncSinkBase<InputT, DynamoDbWriteReq
 
     private final Properties dynamoDbClientProperties;
     private final boolean failOnError;
+    private final String tableArn;
     private final String tableName;
     private final List<String> overwriteByPartitionKeys;
     private transient SdkClientProvider<DynamoDbAsyncClient> asyncClientSdkClientProviderOverride;
@@ -95,6 +97,7 @@ public class DynamoDbSink<InputT> extends AsyncSinkBase<InputT, DynamoDbWriteReq
             long maxTimeInBufferMS,
             long maxRecordSizeInBytes,
             boolean failOnError,
+            String tableArn,
             String tableName,
             List<String> overwriteByPartitionKeys,
             Properties dynamoDbClientProperties) {
@@ -106,18 +109,29 @@ public class DynamoDbSink<InputT> extends AsyncSinkBase<InputT, DynamoDbWriteReq
                 maxBatchSizeInBytes,
                 maxTimeInBufferMS,
                 maxRecordSizeInBytes);
-        checkNotNull(
-                tableName,
-                "Destination table name must be set when initializing the DynamoDB Sink.");
-        checkArgument(
-                !tableName.isEmpty(),
-                "Destination table name must be set when initializing the DynamoDB Sink.");
         checkArgument(
                 maxBatchSize <= 25,
                 "DynamoDB client supports only up to 25 elements in the batch.");
         checkNotNull(dynamoDbClientProperties, "DynamoDB client properties must be set.");
+
+        // Ensure that either tableName or tableArn is set. If both are set, tableArn takes
+        // precedence.
+        if (tableArn != null) {
+            final Arn arn = Arn.fromString(tableArn);
+            this.tableArn = arn.toString();
+            this.tableName = arn.resource().resource();
+        } else {
+            this.tableArn = null;
+            checkNotNull(
+                    tableName,
+                    "Destination table name must be set when initializing the DynamoDB Sink.");
+            checkArgument(
+                    !tableName.isEmpty(),
+                    "Destination table name must be set when initializing the DynamoDB Sink.");
+            this.tableName = tableName;
+        }
+
         this.failOnError = failOnError;
-        this.tableName = tableName;
         this.overwriteByPartitionKeys = overwriteByPartitionKeys;
         this.dynamoDbClientProperties = dynamoDbClientProperties;
     }
@@ -155,6 +169,7 @@ public class DynamoDbSink<InputT> extends AsyncSinkBase<InputT, DynamoDbWriteReq
                 getMaxTimeInBufferMS(),
                 getMaxRecordSizeInBytes(),
                 failOnError,
+                tableArn,
                 tableName,
                 overwriteByPartitionKeys,
                 getAsyncClientProvider(dynamoDbClientProperties),

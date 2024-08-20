@@ -120,7 +120,7 @@ class DynamoDbSinkWriter<InputT> extends AsyncSinkWriter<InputT, DynamoDbWriteRe
 
     private final SdkClientProvider<DynamoDbAsyncClient> clientProvider;
     private final boolean failOnError;
-    private final String tableName;
+    private final String table;
 
     private final List<String> overwriteByPartitionKeys;
 
@@ -134,6 +134,7 @@ class DynamoDbSinkWriter<InputT> extends AsyncSinkWriter<InputT, DynamoDbWriteRe
             long maxTimeInBufferMS,
             long maxRecordSizeInBytes,
             boolean failOnError,
+            String tableArn,
             String tableName,
             List<String> overwriteByPartitionKeys,
             SdkClientProvider<DynamoDbAsyncClient> clientProvider,
@@ -149,7 +150,7 @@ class DynamoDbSinkWriter<InputT> extends AsyncSinkWriter<InputT, DynamoDbWriteRe
                 maxRecordSizeInBytes,
                 states);
         this.failOnError = failOnError;
-        this.tableName = tableName;
+        this.table = tableArn != null ? tableArn : tableName;
         this.overwriteByPartitionKeys = overwriteByPartitionKeys;
         this.metrics = context.metricGroup();
         this.numRecordsSendErrorsCounter = metrics.getNumRecordsSendErrorsCounter();
@@ -184,7 +185,7 @@ class DynamoDbSinkWriter<InputT> extends AsyncSinkWriter<InputT, DynamoDbWriteRe
                         .getClient()
                         .batchWriteItem(
                                 BatchWriteItemRequest.builder()
-                                        .requestItems(singletonMap(tableName, items))
+                                        .requestItems(singletonMap(table, items))
                                         .build());
 
         future.whenComplete(
@@ -203,7 +204,7 @@ class DynamoDbSinkWriter<InputT> extends AsyncSinkWriter<InputT, DynamoDbWriteRe
             BatchWriteItemResponse response, Consumer<List<DynamoDbWriteRequest>> requestResult) {
         List<DynamoDbWriteRequest> unprocessed = new ArrayList<>();
 
-        for (WriteRequest writeRequest : response.unprocessedItems().get(tableName)) {
+        for (WriteRequest writeRequest : response.unprocessedItems().get(table)) {
             unprocessed.add(convertToDynamoDbWriteRequest(writeRequest));
         }
 
